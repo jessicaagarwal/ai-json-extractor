@@ -29,11 +29,22 @@ fields_input = st.sidebar.text_area(
 # Convert to list
 selected_fields = [f.strip() for f in fields_input.split(",") if f.strip()]
 
-user_text = st.text_area(
-    "Paste your text here:",
-    height=250,
-    placeholder="Paste an email, resume, or paragraph..."
-)
+uploaded_file = st.file_uploader("📂 Upload a file (TXT or PDF)", type=["txt", "pdf"])
+
+if uploaded_file:
+    if uploaded_file.type == "text/plain":
+        user_text = uploaded_file.read().decode("utf-8")
+    elif uploaded_file.type == "application/pdf":
+        import pdfplumber
+        with pdfplumber.open(uploaded_file) as pdf:
+            pages = [page.extract_text() for page in pdf.pages]
+            user_text = "\n".join(pages)
+else:
+    user_text = st.text_area(
+        "Paste your text here:",
+        height=250,
+        placeholder="Paste an email, resume, or paragraph..."
+    )
 
 if st.button("Extract JSON"):
     if not user_text.strip():
