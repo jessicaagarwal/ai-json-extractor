@@ -76,6 +76,16 @@ if st.button("Extract JSON"):
                 parsed_json = extract_json(result)
                 st.subheader("✅ Extracted JSON")
                 st.json(parsed_json)
+            
+                # ✅ Download JSON button
+                json_str = json.dumps(parsed_json, indent=4)
+                st.download_button(
+                    label="⬇️ Download JSON",
+                    data=json_str,
+                    file_name="extracted_data.json",
+                    mime="application/json"
+                )
+
             except json.JSONDecodeError:
                 st.error("⚠️ The model returned invalid JSON after cleaning. Raw output below:")
                 st.code(result, language="json")
