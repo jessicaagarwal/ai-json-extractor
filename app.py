@@ -4,7 +4,6 @@ import streamlit as st
 from dotenv import load_dotenv
 from groq import Groq
 
-# Load environment variables
 load_dotenv()
 GROQ_API_KEY = st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY")
 
@@ -12,41 +11,45 @@ if not GROQ_API_KEY:
     st.error("❌ Missing GROQ_API_KEY. Add to .env or Streamlit Secrets.")
     st.stop()
 
-# Initialize Groq client
 client = Groq(api_key=GROQ_API_KEY)
 
-# Streamlit UI
-st.set_page_config(page_title="JSON Extractor", page_icon="🔍")
+st.set_page_config(page_title="Dynamic JSON Extractor", page_icon="🔍")
 st.title("🔍 AI JSON Extractor")
 
-st.write("Paste unstructured text, and I'll extract **Name**, **Email**, and **Phone** as JSON.")
+st.write("Paste unstructured text and choose the fields you want in the output JSON.")
 
-# Text input
+st.sidebar.header("⚙️ JSON Fields")
+default_fields = ["Name", "Email", "Phone"]
+fields_input = st.sidebar.text_area(
+    "Enter fields (comma-separated):",
+    value=", ".join(default_fields),
+    help="Example: Name, Email, Phone, Address, Company"
+)
+
+# Convert to list
+selected_fields = [f.strip() for f in fields_input.split(",") if f.strip()]
+
 user_text = st.text_area(
     "Paste your text here:",
     height=250,
     placeholder="Paste an email, resume, or paragraph..."
 )
 
-# Extract button
 if st.button("Extract JSON"):
     if not user_text.strip():
         st.error("Please provide text for extraction.")
         st.stop()
 
-    # Prompt for the model
+    # Build the JSON format dynamically
+    json_schema = "{\n" + ",\n".join([f'    "{f.lower()}": "..."' for f in selected_fields]) + "\n}"
+
+    # Build prompt
     prompt = f"""
     Extract the following details from the text:
-    - Name
-    - Email
-    - Phone number
+    {", ".join(selected_fields)}
 
     Return ONLY valid JSON in this format:
-    {{
-        "name": "...",
-        "email": "...",
-        "phone": "..."
-    }}
+    {json_schema}
 
     Text:
     {user_text}
@@ -66,10 +69,9 @@ if st.button("Extract JSON"):
 
             # Clean and parse model output
             def extract_json(text: str) -> dict:
-                # Remove code fences and leading/trailing whitespace
                 text = text.strip().replace("```json", "").replace("```", "")
                 return json.loads(text)
-            
+
             try:
                 parsed_json = extract_json(result)
                 st.subheader("✅ Extracted JSON")
@@ -77,7 +79,6 @@ if st.button("Extract JSON"):
             except json.JSONDecodeError:
                 st.error("⚠️ The model returned invalid JSON after cleaning. Raw output below:")
                 st.code(result, language="json")
-
 
         except Exception as e:
             st.error(f"Error: {e}")
